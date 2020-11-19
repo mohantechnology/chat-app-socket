@@ -20,11 +20,13 @@
   
   app.get('/client.js', function (req, res) {
     res.sendFile(__dirname + '/client.js');
+    console.log("requestfor  client js "); 
     // res.send("dkfjk"); 
   });
   
   app.get('/index.html', function (req, res) {
     res.sendFile(__dirname + '/index.html');
+    console.log("requestfor  index jss "); 
   });
   
   let user = {};
