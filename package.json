@@ -1,0 +1,17 @@
+{
+  "name": "socket",
+  "version": "1.0.0",
+  "description": "my socket request handler",
+  "main": "socket-file.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start":"node socket-file.js"
+  },
+  "author": "wonder woman",
+  "license": "ISC",
+  "dependencies": {
+    "nodemon": "^2.0.6",
+    "socketio": "^1.0.0"
+  }
+
+}
