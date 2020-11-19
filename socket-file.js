@@ -1,10 +1,35 @@
-const io = require('socket.io')( process.env.PORT || 8000); 
+// const io = require('socket.io')( process.env.PORT || 8000); 
 
 
 
-const user = {}; 
+// const user = {}; 
 
-io.on('connection',(socket)=>{
+// io.on('connection',(socket)=>{
+
+
+
+
+
+
+
+  var app = require('express')();
+  var http = require('http').Server(app);
+  var io = require('socket.io')(http);
+  // var port = process.env.PORT || 3000;
+  var port = process.env.PORT || 8000;
+  
+  app.get('/client.js', function (req, res) {
+    res.sendFile(__dirname + '/client.js');
+    // res.send("dkfjk"); 
+  });
+  
+  app.get('/index.html', function (req, res) {
+    res.sendFile(__dirname + '/index.html');
+  });
+  
+  let user = {};
+  let user_array= [];  
+  io.on('connection', function (socket) {
   console.log(" -- initial new user connecte"); 
 
 
@@ -37,6 +62,10 @@ socket.on('send-specific-client',(data)=>{
   });
 }); 
 
+
+http.listen(port, function () {
+  console.log('listening on *:' + port);
+});
 
 
 
