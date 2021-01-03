@@ -5,15 +5,16 @@
   "main": "socket-file.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start":"node socket-file.js"
+    "start": "node socket-file.js"
   },
   "author": "wonder woman",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^8.2.0",
     "express": "^4.15.2",
     "nodemon": "^2.0.4",
     "socket.io": "^1.7.3",
-    "socket.io-client": "^2.3.1"
+    "socket.io-client": "^2.3.1",
+    "socket.io-cookie-parser": "^1.0.0"
   }
-
 }

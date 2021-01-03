@@ -1,69 +1,193 @@
-// const io = require('socket.io')( process.env.PORT || 8000); 
-
-
-
-// const user = {}; 
-
-// io.on('connection',(socket)=>{
-
-
-
+require('dotenv').config();
+var app = require('express')();
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+const axios = require('axios');
+const { createSocket } = require('dgram');
+const jwt = require("jsonwebtoken");
+const cookieParser = require('socket.io-cookie-parser');
 
 
 
 
-  var app = require('express')();
-  var http = require('http').Server(app);
-  var io = require('socket.io')(http);
-  // var port = process.env.PORT || 3000;
-  var port = process.env.PORT || 8000;
+function pr(r1, r2, r3, r4) {
+
+  if (r1) {
+      console.log(r1)
+  }
+
+  if (r2) {
+      console.log(r2)
+  }
+  if (r3) {
+      console.log(r3)
+  }
+  if (r4) {
+      console.log(r4)
+  }
+}
+
+
+
+
+
+io.use(cookieParser());
+
+
+
+var port = process.env.PORT || 8000;
+
+
+
+
+//socket id to uniqe id and friend detail
+var socket_to_detail = {};
+
+var u_id_to_detail = {};
+
+var u_s = {};
+var s_u = {};
+var user_connected_to_uid = {};
+
+io.on('connection', function (socket) {
+  console.log(" -- initial new user connecte\n");
+  let cookie = jwt.decode(socket.request.cookies['li']);
+  console.log(cookie);
+
+  axios({
+    method: 'post',
+    url: process.env.API_URL + "/check_user_details",
+    data: cookie
+  }).then(function (response) {
+    console.log("resipo: id  ", socket.id);
+    console.log(response.data);
+
+
+
+
+
+
+    if (response.data.status == "ok") {
+
+      //if user already added 
+      if(u_id_to_detail[cookie.u_id]){
+        pr("upadated previos"); 
+        //delete previous scoket id 
+        delete socket_to_detail[ u_s[cookie.u_id]] ;
+        delete s_u[ u_s[cookie.u_id]]; 
+
+      }
+     
+      u_id_to_detail[cookie.u_id] = cookie;
+      s_u[socket.id] = cookie.u_id;
+      u_s[cookie.u_id] = socket.id ;
+      if (user_connected_to_uid[cookie.u_id]) {
+      
+        let f_list = user_connected_to_uid[cookie.u_id].f_list;
+        for (let i = 0; i < f_list.length; i++) {
+          socket.broadcast.to(f_list[i]).emit('friend-online');
+          }
+
+      }
+      socket.emit("setid",{id:cookie.u_id});
+  pr("connected andd added to all "); 
+  pr( "socket_to_details", socket_to_detail,"u_id_todetial", u_id_to_detail); 
+  pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+
+    } else { socket.emit("redirect"); }
+  }).catch(err => {
+    console.log("error is: ");
+    console.log(err.message);
+  });
+
+
+
+
+
+
+
+
+//add the client to his friend u_id list 
+  socket.on('connected-to', (data) => {
+   
+    if(user_connected_to_uid[data.curr_f_id]){
+    
+      //removed the client from his previosu friend  u_id list 
+      if(data.prev_f_id){
+        user_connected_to_uid[data.prev_f_id].f_list.unshift(data.u_id)
+      }
+      //add the client in his current friend u_id list 
+      user_connected_to_uid[data.curr_f_id].f_list.push(data.curr_f_id)
+    }else{
+      user_connected_to_uid[data.curr_f_id] = { f_list:[data.curr_f_id]}; 
+    }
+
+    pr("connetcted to and adding in friend list incomig ",data); 
+    pr( "socket_to_details", socket_to_detail,"u_id_todetial", u_id_to_detail); 
+    pr("s_u",s_u,"friend list ",user_connected_to_uid); 
   
-  app.get('/client.js', function (req, res) {
-    res.sendFile(__dirname + '/client.js');
-    console.log("requestfor  client js "); 
-    // res.send("dkfjk"); 
+   
   });
   
-  app.get('/index.html', function (req, res) {
-    res.sendFile(__dirname + '/index.html');
-    console.log("requestfor  index jss "); 
+
+
+  socket.on('send-message', (data) => {
+    pr("sendign message to ",data);
+    let f_s_id=    u_s[data.curr_f_id]
+    socket.broadcast.to(f_s_id).emit('rec-message', data);
+     
   });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  socket.on('disconnect', (data) => {
+
+    let curr_f_id = socket.request.cookies.curr_f_id; 
+    let u_id = s_u[socket.id]; 
+      if(user_connected_to_uid[curr_f_id]){
+      
+        //removed the client u_id from his previosu friend  u_id list 
+       
+      user_connected_to_uid[curr_f_id].f_list[u_id] = undefined; 
   
-  let user = {};
-  let user_array= [];  
-  io.on('connection', function (socket) {
-  console.log(" -- initial new user connecte"); 
+      }
+// let a = []; 
+// a.
 
-
-
-  socket.on('new-user-connected',(data)=>{
-    console.log("new user connected " + data.name); 
-    socket.broadcast.emit("new-user-connected" ,data.name); 
-    user[socket.id] = data.name; 
-}); 
-
-
-socket.on('message-sent',(data)=>{
-
-  socket.broadcast.emit("message-recived" ,data); 
+    socket.broadcast.to(null).emit({"ok":"yyes"}) ; 
+    delete socket_to_detail[socket.id];
+    delete u_id_to_detail[cookie.u_id];
+    delete s_u[socket.id];
+    if (user_connected_to_uid[cookie.u_id]) {
+      let f_list = user_connected_to_uid[cookie.u_id].f_list;
+      for (let i = 0; i < f_list.length; i++) {
+        socket.broadcast.to(f_list[i]).emit('friend-offline');
+      }
+    }
   
-}); 
 
-socket.on('send-specific-client',(data)=>{
-  
- console.log( Object.keys(user)); 
-  io.to(Object.keys(user)[0]).emit('recieved-pecific-client'," your are the only one who recied message "); 
+  pr("******disconencted",data,"cookie ",socket.request.cookies.curr_f_id); 
+  pr( "socket_to_details", socket_to_detail,"u_id_todetial", u_id_to_detail); 
+  pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+  // socket_to_detail[socket.id] = cookie;
+  // u_id_to_detail[cookie.u_id] = cookie;
+  // s_u[socket.id] = cookie.u_id;
+
+  });
+
+
 });
-
-
-  socket.on('disconnect', () => {
-    console.log('user-disconnected');
-    socket.broadcast.emit("user-disconnected" ,user[socket.id] )
-    delete    user[socket.id] ; 
-
-  });
-}); 
-
 
 http.listen(port, function () {
   console.log('listening on *:' + port);
@@ -71,35 +195,32 @@ http.listen(port, function () {
 
 
 
-// function str_match(text, patt){
-
-//   let i,j,last,patt_sum,str_sum,total_sum , result;
-//    let len1,len2; 
 
 
-// let str = text.toLowerCase();
-//    patt = patt.toLowerCase(); 
-//    len1= patt.length(); 
-//    len2=str.length(); 
-//   if(len1 > len2 ){
-//     return text;
-//   }
+// // sending to sender-client only
+// socket.emit('message', "this is a test");
+
+// // sending to all clients, include sender
+// io.emit('message', "this is a test");
+
+// // sending to all clients except sender
+// socket.broadcast.emit('message', "this is a test");
+
+// // sending to all clients in 'game' room(channel) except sender
+// socket.broadcast.to('game').emit('message', 'nice game');
+
+// // sending to all clients in 'game' room(channel), include sender
+// io.in('game').emit('message', 'cool game');
+
+// // sending to sender client, only if they are in 'game' room(channel)
+// socket.to('game').emit('message', 'enjoy the game');
+
+// // sending to all clients in namespace 'myNamespace', include sender
+// io.of('myNamespace').emit('message', 'gg');
+
+// // sending to individual socketid
+// socket.broadcast.to(socketid).emit('message', 'for your eyes only');
 
 
-//    patt_sum=str_sum=0; 
-//    total_sum= power(128,len1)
-//    var str = "HELLO WORLD";
-//    var n = str.charCodeAt(str.length-1);
-
-
-//    for(i=0; i<len1; i++) 
-//     {
-//       patt_sum += (patt_sum + patt[i]) *128; 
-//     }
-//     console.log("patterns um is: "+ patt_sum); 
-//      console.log( " pwoer of 128  : " , total_sum); 
-
-//      for(i=0; i<len1; i++ ){
-//       str_sum += (str_sum + str[i])
-//      }
-// }
+// socket.join('some-unique-room-name'); // Do this for both users you want to chat with each other
+// socket.broadcast.to('the-unique-room-name').emit('message', 'blah'); // Send a message to the chat room.
