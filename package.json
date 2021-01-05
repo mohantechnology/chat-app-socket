@@ -5,7 +5,7 @@
   "main": "socket-file.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node socket-file.js"
+    "start": "node index.js"
   },
   "author": "wonder woman",
   "license": "ISC",

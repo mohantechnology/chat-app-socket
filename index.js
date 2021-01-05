@@ -47,6 +47,7 @@ var u_id_to_detail = {};
 
 var u_s = {};
 var s_u = {};
+//user connected to this u_id 
 var user_connected_to_uid = {};
 
 io.on('connection', function (socket) {
@@ -92,7 +93,7 @@ io.on('connection', function (socket) {
       socket.emit("setid",{id:cookie.u_id});
   pr("connected andd added to all "); 
   pr( "socket_to_details", socket_to_detail,"u_id_todetial", u_id_to_detail); 
-  pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+  pr("s_u",s_u,"friend list ",user_connected_to_uid,"u_s",u_s ); 
 
     } else { socket.emit("redirect"); }
   }).catch(err => {
@@ -133,8 +134,41 @@ io.on('connection', function (socket) {
 
   socket.on('send-message', (data) => {
     pr("sendign message to ",data);
-    let f_s_id=    u_s[data.curr_f_id]
-    socket.broadcast.to(f_s_id).emit('rec-message', data);
+    let f_s_id=    u_s[data.curr_f_id]; 
+    data.friend_u_id = data.curr_f_id; 
+  data.u_id = data.user_id; 
+    // let send_data = {date:data.date,time:data.time,u_id:data.user_id, friend_u_id : f_s_id}
+
+    let url ; 
+    pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
+    if( u_id_to_detail[ data.curr_f_id] ){
+   
+      socket.broadcast.to(f_s_id).emit('rec-message', data);
+       url = "/save_readed_message"; 
+       
+    }else{
+        url = "/save_unreaded_message"; 
+    }
+    
+  axios({
+    method: 'post',
+    url: process.env.API_URL + url,
+    data:data
+  }).then(function (response) {
+    
+    if (response.data.status == "ok") {
+        pr("saved the message to url = ",url,data); 
+    }else{
+      pr(" NOt abele to saved the message to url = ",url,data); 
+    }
+   
+  }).catch(err => {
+    console.log("error is: ");
+    console.log(err.message);
+  });
+
+    
+
      
   });
 
@@ -162,11 +196,13 @@ io.on('connection', function (socket) {
       user_connected_to_uid[curr_f_id].f_list[u_id] = undefined; 
   
       }
+
 // let a = []; 
 // a.
 
     socket.broadcast.to(null).emit({"ok":"yyes"}) ; 
     delete socket_to_detail[socket.id];
+    // delete u_s[cookie.u_id]; 
     delete u_id_to_detail[cookie.u_id];
     delete s_u[socket.id];
     if (user_connected_to_uid[cookie.u_id]) {
@@ -179,7 +215,7 @@ io.on('connection', function (socket) {
 
   pr("******disconencted",data,"cookie ",socket.request.cookies.curr_f_id); 
   pr( "socket_to_details", socket_to_detail,"u_id_todetial", u_id_to_detail); 
-  pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+  pr("s_u",s_u,"friend list ",user_connected_to_uid,"u_s",u_s); 
   // socket_to_detail[socket.id] = cookie;
   // u_id_to_detail[cookie.u_id] = cookie;
   // s_u[socket.id] = cookie.u_id;
