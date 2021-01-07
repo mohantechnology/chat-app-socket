@@ -65,9 +65,6 @@ io.on('connection', function (socket) {
 
 
 
-
-
-
     if (response.data.status == "ok") {
 
       //if user already added 
@@ -186,9 +183,10 @@ io.on('connection', function (socket) {
 
 
   socket.on('disconnect', (data) => {
-
+       let cookie =   socket.request.cookies; 
     let curr_f_id = socket.request.cookies.curr_f_id; 
     let u_id = s_u[socket.id]; 
+    let send_data = {u_id:u_id,time:cookie.time,date:cookie.date}
       if(user_connected_to_uid[curr_f_id]){
       
         //removed the client u_id from his previosu friend  u_id list 
@@ -200,7 +198,6 @@ io.on('connection', function (socket) {
 // let a = []; 
 // a.
 
-    socket.broadcast.to(null).emit({"ok":"yyes"}) ; 
     delete socket_to_detail[socket.id];
     // delete u_s[cookie.u_id]; 
     delete u_id_to_detail[cookie.u_id];
@@ -212,10 +209,28 @@ io.on('connection', function (socket) {
       }
     }
   
+//update  user as offline 
+// pr("curent cookie si: ",cookie) ; 
+    axios({
+      method: 'post',
+      url: process.env.API_URL + "/offline_user",
+      data:send_data
+    }).then(function (response) {
+      
+       console.log("cokies saved ",response.data); 
+     
+    }).catch(err => {
+      console.log("error is: ");
+      console.log(err.message);
+    });
+    socket.broadcast.emit("friend-status",{id:u_id, current_status:"Last seen on "+(cookie.date)+" at "+(cookie.time)}); 
+    pr("soket is emiit ing "); 
 
-  pr("******disconencted",data,"cookie ",socket.request.cookies.curr_f_id); 
-  pr( "socket_to_details", socket_to_detail,"u_id_todetial", u_id_to_detail); 
-  pr("s_u",s_u,"friend list ",user_connected_to_uid,"u_s",u_s); 
+  // pr("******disconencted",data,"cookie ",socket.request.cookies.curr_f_id); 
+  // pr( "socket_to_details", socket_to_detail,"u_id_todetial", u_id_to_detail); 
+  // pr("s_u",s_u,"friend list ",user_connected_to_uid,"u_s",u_s); 
+
+
   // socket_to_detail[socket.id] = cookie;
   // u_id_to_detail[cookie.u_id] = cookie;
   // s_u[socket.id] = cookie.u_id;
