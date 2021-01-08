@@ -41,9 +41,9 @@ var port = process.env.PORT || 8000;
 
 
 //socket id to uniqe id and friend detail
-var socket_to_detail = {};
+// var socket_to_detail = {};
 
-var u_id_to_detail = {};
+// var u_id_to_detail = {};
 
 var u_s = {};
 var s_u = {};
@@ -68,29 +68,28 @@ io.on('connection', function (socket) {
     if (response.data.status == "ok") {
 
       //if user already added 
-      if(u_id_to_detail[cookie.u_id]){
+      if(u_s[cookie.u_id]){
         pr("upadated previos"); 
-        //delete previous scoket id 
-        delete socket_to_detail[ u_s[cookie.u_id]] ;
+
         delete s_u[ u_s[cookie.u_id]]; 
 
       }
-     
-      u_id_to_detail[cookie.u_id] = cookie;
+
       s_u[socket.id] = cookie.u_id;
       u_s[cookie.u_id] = socket.id ;
       if (user_connected_to_uid[cookie.u_id]) {
       
         let f_list = user_connected_to_uid[cookie.u_id].f_list;
         for (let i = 0; i < f_list.length; i++) {
-          socket.broadcast.to(f_list[i]).emit('friend-online');
+          socket.broadcast.to(u_s[f_list[i]]).emit('friend-status',{id:cookie.u_id, current_status:"online"});
           }
 
       }
+  
       socket.emit("setid",{id:cookie.u_id});
   pr("connected andd added to all "); 
-  pr( "socket_to_details", socket_to_detail,"u_id_todetial", u_id_to_detail); 
-  pr("s_u",s_u,"friend list ",user_connected_to_uid,"u_s",u_s ); 
+  pr( "----------------u_s",u_s); 
+  pr("s_u",s_u,"friend list ",user_connected_to_uid); 
 
     } else { socket.emit("redirect"); }
   }).catch(err => {
@@ -100,7 +99,21 @@ io.on('connection', function (socket) {
 
 
 
+  socket.on('typing', (data) => {
+   pr("typing .. ",data); 
+    socket.broadcast.to(u_s[data.curr_f_id]).emit('typing',data);
 
+  }); 
+
+  socket.on('not-typing', (data) => {
+    pr("NOt - -typing  ",data); 
+     socket.broadcast.to(u_s[data.curr_f_id]).emit('not-typing',data);
+ 
+   }); 
+ 
+// socket.on("close",(data)=>{
+//   socket.broadcast.emit("close",data); 
+// })
 
 
 
@@ -108,20 +121,25 @@ io.on('connection', function (socket) {
 //add the client to his friend u_id list 
   socket.on('connected-to', (data) => {
    
+
+    pr("connected to dat ",data) ; 
+ //removed the client from his previosu friend  u_id list 
+ if(data.prev_f_id && user_connected_to_uid[data.prev_f_id]){
+  let index = user_connected_to_uid[data.prev_f_id].f_list.indexOf(data.u_id); 
+  if(index!=-1){
+    user_connected_to_uid[data.prev_f_id].f_list.splice(index,1); 
+  }
+
+}
+ //add the client in his current friend u_id list 
     if(user_connected_to_uid[data.curr_f_id]){
-    
-      //removed the client from his previosu friend  u_id list 
-      if(data.prev_f_id){
-        user_connected_to_uid[data.prev_f_id].f_list.unshift(data.u_id)
-      }
-      //add the client in his current friend u_id list 
-      user_connected_to_uid[data.curr_f_id].f_list.push(data.curr_f_id)
+      user_connected_to_uid[data.curr_f_id].f_list.push(data.u_id)
     }else{
-      user_connected_to_uid[data.curr_f_id] = { f_list:[data.curr_f_id]}; 
+      user_connected_to_uid[data.curr_f_id] = { f_list:[data.u_id]}; 
     }
 
     pr("connetcted to and adding in friend list incomig ",data); 
-    pr( "socket_to_details", socket_to_detail,"u_id_todetial", u_id_to_detail); 
+    pr( "u_s",u_s); 
     pr("s_u",s_u,"friend list ",user_connected_to_uid); 
   
    
@@ -137,8 +155,8 @@ io.on('connection', function (socket) {
     // let send_data = {date:data.date,time:data.time,u_id:data.user_id, friend_u_id : f_s_id}
 
     let url ; 
-    pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
-    if( u_id_to_detail[ data.curr_f_id] ){
+    // pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
+    if( u_s[ data.curr_f_id] ){
    
       socket.broadcast.to(f_s_id).emit('rec-message', data);
        url = "/save_readed_message"; 
@@ -184,28 +202,32 @@ io.on('connection', function (socket) {
 
   socket.on('disconnect', (data) => {
        let cookie =   socket.request.cookies; 
-    let curr_f_id = socket.request.cookies.curr_f_id; 
+    let curr_f_id = cookie.curr_f_id; 
     let u_id = s_u[socket.id]; 
     let send_data = {u_id:u_id,time:cookie.time,date:cookie.date}
-      if(user_connected_to_uid[curr_f_id]){
-      
-        //removed the client u_id from his previosu friend  u_id list 
-       
-      user_connected_to_uid[curr_f_id].f_list[u_id] = undefined; 
-  
+      pr("coikie data ",cookie,"u_Id ",u_id); 
+    //remove the client to his connected list 
+    if(curr_f_id && user_connected_to_uid[curr_f_id]){
+      let index = user_connected_to_uid[curr_f_id].f_list.indexOf(u_id); 
+      if(index!=-1){
+        pr("**removing at index ",index); 
+        user_connected_to_uid[curr_f_id].f_list.splice(index,1); 
       }
+    
+    }
 
 // let a = []; 
 // a.
 
-    delete socket_to_detail[socket.id];
-    // delete u_s[cookie.u_id]; 
-    delete u_id_to_detail[cookie.u_id];
+    // delete socket_to_detail[socket.id];
+    // 
+    // delete u_id_to_detail[cookie.u_id];
+    delete u_s[u_id]; 
     delete s_u[socket.id];
-    if (user_connected_to_uid[cookie.u_id]) {
-      let f_list = user_connected_to_uid[cookie.u_id].f_list;
+    if (user_connected_to_uid[u_id]) {
+      let f_list = user_connected_to_uid[u_id].f_list;
       for (let i = 0; i < f_list.length; i++) {
-        socket.broadcast.to(f_list[i]).emit('friend-offline');
+        socket.broadcast.to(u_s[f_list[i]]).emit('friend-status',{id:u_id, current_status:"Last seen on "+(cookie.date)+" at "+(cookie.time)});
       }
     }
   
@@ -223,17 +245,8 @@ io.on('connection', function (socket) {
       console.log("error is: ");
       console.log(err.message);
     });
-    socket.broadcast.emit("friend-status",{id:u_id, current_status:"Last seen on "+(cookie.date)+" at "+(cookie.time)}); 
-    pr("soket is emiit ing "); 
-
-  // pr("******disconencted",data,"cookie ",socket.request.cookies.curr_f_id); 
-  // pr( "socket_to_details", socket_to_detail,"u_id_todetial", u_id_to_detail); 
-  // pr("s_u",s_u,"friend list ",user_connected_to_uid,"u_s",u_s); 
-
-
-  // socket_to_detail[socket.id] = cookie;
-  // u_id_to_detail[cookie.u_id] = cookie;
-  // s_u[socket.id] = cookie.u_id;
+    pr( "---disconnected--------u_s",u_s); 
+    pr("s_u",s_u,"friend list ",user_connected_to_uid); 
 
   });
 
