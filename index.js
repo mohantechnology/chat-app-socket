@@ -1,13 +1,19 @@
 require('dotenv').config();
 var app = require('express')();
+
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 const axios = require('axios');
 const { createSocket } = require('dgram');
 const jwt = require("jsonwebtoken");
 const cookieParser = require('socket.io-cookie-parser');
+var cookie = require('cookie')
 
 
+
+
+var cors = require('cors')
+app.use(cors())
 
 
 function pr(r1, r2, r3, r4) {
@@ -52,17 +58,23 @@ var user_connected_to_uid = {};
 
 io.on('connection', function (socket) {
   console.log(" -- initial new user connecte\n");
+  console.log("incoming cookie == "); 
+  console.log(socket.request.cookies); 
+  console.log("<<->end cookie data)"); 
   let cookie = jwt.decode(socket.request.cookies['li']);
+  console.log("cookei data is "); 
   console.log(cookie);
+
+
 
   axios({
     method: 'post',
     url: process.env.API_URL + "/check_user_details",
     data: cookie
   }).then(function (response) {
-    console.log("resipo: id  ", socket.id);
+    console.log("resipo: id  ", socket.id , "response data = ");
     console.log(response.data);
-
+    console.log("<--end of response data)"); 
 
 
     if (response.data.status == "ok") {
@@ -91,7 +103,9 @@ io.on('connection', function (socket) {
   pr( "----------------u_s",u_s); 
   pr("s_u",s_u,"friend list ",user_connected_to_uid); 
 
-    } else { socket.emit("redirect"); }
+    } else { 
+      // socket.emit("redirect"); 
+    }
   }).catch(err => {
     console.log("error is: ");
     console.log(err.message);
@@ -152,10 +166,12 @@ io.on('connection', function (socket) {
     let f_s_id=    u_s[data.curr_f_id]; 
     data.friend_u_id = data.curr_f_id; 
   data.u_id = data.user_id; 
+
     // let send_data = {date:data.date,time:data.time,u_id:data.user_id, friend_u_id : f_s_id}
 
     let url ; 
     // pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
+    //if user is online emit rec-message and save to database 
     if( u_s[ data.curr_f_id] ){
    
       socket.broadcast.to(f_s_id).emit('rec-message', data);
