@@ -208,6 +208,47 @@ io.on('connection', function (socket) {
 
 
 
+  socket.on('sent-file', (data) => {
+    pr("sendign file  to ",data);
+    let f_s_id=    u_s[data.curr_f_id]; 
+    data.friend_u_id = data.curr_f_id; 
+  data.u_id = data.user_id; 
+
+    // let send_data = {date:data.date,time:data.time,u_id:data.user_id, friend_u_id : f_s_id}
+
+    let url ; 
+    // pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
+    //if user is online emit rec-message and save to database 
+    if( u_s[ data.curr_f_id] ){
+   
+      socket.broadcast.to(f_s_id).emit('rec-message', data);
+       url = "/save_readed_file"; 
+       
+    }else{
+        url = "/save_unreaded_file"; 
+    }
+    
+  axios({
+    method: 'post',
+    url: process.env.API_URL + url,
+    data:data
+  }).then(function (response) {
+    
+    if (response.data.status == "ok") {
+        pr("saved the message to url = ",url,data); 
+    }else{
+      pr(" NOt abele to saved the rrmessage to url = ",url,data); 
+    }
+   
+  }).catch(err => {
+    console.log("error is: ");
+    console.log(err.message);
+  });
+
+    
+
+     
+  });
 
 
 
