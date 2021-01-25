@@ -6,8 +6,8 @@ var io = require('socket.io')(http);
 const axios = require('axios');
 const { createSocket } = require('dgram');
 const jwt = require("jsonwebtoken");
-const cookieParser = require('socket.io-cookie-parser');
-var cookie = require('cookie')
+// const cookieParser = require('socket.io-cookie-parser');
+// var cookie = require('cookie')
 
 
 
@@ -37,7 +37,7 @@ function pr(r1, r2, r3, r4) {
 
 
 
-io.use(cookieParser());
+// io.use(cookieParser());
 
 
 
@@ -57,16 +57,21 @@ var s_u = {};
 var user_connected_to_uid = {};
 
 io.on('connection', function (socket) {
-  console.log(" -- initial new user connecte\n");
-  console.log("incoming cookie == "); 
-  console.log(socket.request.cookies); 
-  console.log("<<->end cookie data)"); 
-  let cookie = jwt.decode(socket.request.cookies['li']);
+  // console.log(" -- initial new user connecte\n");
+  // console.log("incoming cookie == "); 
+  // console.log(socket.request.cookies); 
+
+
   console.log("cookei data is "); 
-  console.log(cookie);
+  // console.log(cookie);
+
+socket.on("user-connected",(data)=>{
 
 
+  let cookie = jwt.decode(data.li);
 
+  console.log("cookei data is "); 
+  console.log(cookie);  console.log("<<->end cookie data)"); 
   axios({
     method: 'post',
     url: process.env.API_URL + "/check_user_details",
@@ -112,6 +117,9 @@ io.on('connection', function (socket) {
   });
 
 
+})
+
+
 
   socket.on('typing', (data) => {
    pr("typing .. ",data); 
@@ -123,6 +131,13 @@ io.on('connection', function (socket) {
     pr("NOt - -typing  ",data); 
      socket.broadcast.to(u_s[data.curr_f_id]).emit('not-typing',data);
  
+ pr("_____________________"); 
+ 
+ pr("connetcted to and adding in friend list incomig ",data); 
+ pr( "u_s",u_s); 
+ pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+ pr("__________________________"); 
+
    }); 
  
 // socket.on("close",(data)=>{
@@ -257,12 +272,13 @@ io.on('connection', function (socket) {
 
 
 
-  socket.on('disconnect', (data) => {
-       let cookie =   socket.request.cookies; 
+  socket.on('user-disconnect', (data) => {
+       let cookie =  data; 
+       console.log("user disconnected "); 
     let curr_f_id = cookie.curr_f_id; 
     let u_id = s_u[socket.id]; 
     let send_data = {u_id:u_id,time:cookie.time,date:cookie.date}
-      pr("coikie data ",cookie,"u_Id ",u_id); 
+      pr("coikie<idsoconnected> is data ",cookie,"u_Id ",u_id); 
     //remove the client to his connected list 
     if(curr_f_id && user_connected_to_uid[curr_f_id]){
       let index = user_connected_to_uid[curr_f_id].f_list.indexOf(u_id); 
