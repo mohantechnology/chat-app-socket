@@ -14,42 +14,12 @@ const jwt = require("jsonwebtoken");
 
 var cors = require('cors')
 app.use(cors())
-
-
-function pr(r1, r2, r3, r4) {
-
-  if (r1) {
-      console.log(r1)
-  }
-
-  if (r2) {
-      console.log(r2)
-  }
-  if (r3) {
-      console.log(r3)
-  }
-  if (r4) {
-      console.log(r4)
-  }
-}
-
-
-
-
-
 // io.use(cookieParser());
-
-
+ 
 
 var port = process.env.PORT || 8000;
 
-
-
-
-//socket id to uniqe id and friend detail
-// var socket_to_detail = {};
-
-// var u_id_to_detail = {};
+ 
 
 var u_s = {};
 var s_u = {};
@@ -57,37 +27,23 @@ var s_u = {};
 var user_connected_to_uid = {};
 
 io.on('connection', function (socket) {
-  // console.log(" -- initial new user connecte\n");
-  // console.log("incoming cookie == "); 
-  // console.log(socket.request.cookies); 
-
-
-  console.log("cookei data is "); 
-  // console.log(cookie);
-
+  
 socket.on("user-connected",(data)=>{
 
 
-  let cookie = jwt.decode(data.li);
+  let cookie = jwt.decode(data.li );
 
-  console.log("cookei data is "); 
-  console.log(cookie);  console.log("<<->end cookie data)"); 
   axios({
     method: 'post',
     url: process.env.API_URL + "/check_user_details",
     data: cookie
   }).then(function (response) {
-    console.log("resipo: id  ", socket.id , "response data = ");
-    console.log(response.data);
-    console.log("<--end of response data)"); 
-
-
+ 
     if (response.data.status == "ok") {
 
       //if user already added 
       if(u_s[cookie.u_id]){
-        pr("upadated previos"); 
-
+   
         delete s_u[ u_s[cookie.u_id]]; 
 
       }
@@ -104,16 +60,14 @@ socket.on("user-connected",(data)=>{
       }
   
       socket.emit("setid",{id:cookie.u_id});
-  pr("connected andd added to all "); 
-  pr( "----------------u_s",u_s); 
-  pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+  // pr("connected andd added to all "); 
+  // pr( "----------------u_s",u_s); 
+  // pr("s_u",s_u,"friend list ",user_connected_to_uid); 
 
     } else { 
-      // socket.emit("redirect"); 
+      socket.emit("redirect"); 
     }
-  }).catch(err => {
-    console.log("error is: ");
-    console.log(err.message);
+  }).catch(err => { 
   });
 
 
@@ -122,36 +76,22 @@ socket.on("user-connected",(data)=>{
 
 
   socket.on('typing', (data) => {
-   pr("typing .. ",data); 
     socket.broadcast.to(u_s[data.curr_f_id]).emit('typing',data);
 
   }); 
 
   socket.on('not-typing', (data) => {
-    pr("NOt - -typing  ",data); 
+
      socket.broadcast.to(u_s[data.curr_f_id]).emit('not-typing',data);
- 
- pr("_____________________"); 
- 
- pr("connetcted to and adding in friend list incomig ",data); 
- pr( "u_s",u_s); 
- pr("s_u",s_u,"friend list ",user_connected_to_uid); 
- pr("__________________________"); 
+
 
    }); 
  
-// socket.on("close",(data)=>{
-//   socket.broadcast.emit("close",data); 
-// })
-
-
 
 
 //add the client to his friend u_id list 
   socket.on('connected-to', (data) => {
-   
-
-    pr("connected to dat ",data) ; 
+ 
  //removed the client from his previosu friend  u_id list 
  if(data.prev_f_id && user_connected_to_uid[data.prev_f_id]){
   let index = user_connected_to_uid[data.prev_f_id].f_list.indexOf(data.u_id); 
@@ -167,33 +107,28 @@ socket.on("user-connected",(data)=>{
       user_connected_to_uid[data.curr_f_id] = { f_list:[data.u_id]}; 
     }
 
-    pr("connetcted to and adding in friend list incomig ",data); 
-    pr( "u_s",u_s); 
-    pr("s_u",s_u,"friend list ",user_connected_to_uid); 
-  
+ 
    
   });
   
 
 
-  socket.on('send-message', (data) => {
-    pr("sendign message to ",data);
+  socket.on('send-message', (data) => { 
     let f_s_id=    u_s[data.curr_f_id]; 
     data.friend_u_id = data.curr_f_id; 
   data.u_id = data.user_id; 
 
-    // let send_data = {date:data.date,time:data.time,u_id:data.user_id, friend_u_id : f_s_id}
-
     let url ; 
     // pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
     //if user is online emit rec-message and save to database 
+
     if( u_s[ data.curr_f_id] ){
-   
+      // data.is_readed=true;
       socket.broadcast.to(f_s_id).emit('rec-message', data);
        url = "/save_readed_message"; 
        
     }else{
-        url = "/save_unreaded_message"; 
+      url = "/save_unreaded_message"; 
     }
     
   axios({
@@ -202,15 +137,14 @@ socket.on("user-connected",(data)=>{
     data:data
   }).then(function (response) {
     
-    if (response.data.status == "ok") {
-        pr("saved the message to url = ",url,data); 
-    }else{
-      pr(" NOt abele to saved the message to url = ",url,data); 
-    }
+    // if (response.data.status == "ok") {
+    //     pr("saved the message to url = ",url,data); 
+    // }else{
+    //   pr(" NOt abele to saved the message to url = ",url,data); 
+    // }
    
   }).catch(err => {
-    console.log("error is: ");
-    console.log(err.message);
+    
   });
 
     
@@ -224,16 +158,13 @@ socket.on("user-connected",(data)=>{
 
 
   socket.on('sent-file', (data) => {
-    pr("sendign file  to ",data);
+    // pr("sendign file  to ",data);
     let f_s_id=    u_s[data.curr_f_id]; 
     data.friend_u_id = data.curr_f_id; 
   data.u_id = data.user_id; 
-
-    // let send_data = {date:data.date,time:data.time,u_id:data.user_id, friend_u_id : f_s_id}
-
+ 
     let url ; 
-    // pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
-    //if user is online emit rec-message and save to database 
+ 
     if( u_s[ data.curr_f_id] ){
    
       socket.broadcast.to(f_s_id).emit('rec-message', data);
@@ -249,15 +180,15 @@ socket.on("user-connected",(data)=>{
     data:data
   }).then(function (response) {
     
-    if (response.data.status == "ok") {
-        pr("saved the message to url = ",url,data); 
-    }else{
-      pr(" NOt abele to saved the rrmessage to url = ",url,data); 
-    }
+    // if (response.data.status == "ok") {
+    //     pr("saved the message to url = ",url,data); 
+    // }else{
+    //   pr(" NOt abele to saved the rrmessage to url = ",url,data); 
+    // }
    
   }).catch(err => {
-    console.log("error is: ");
-    console.log(err.message);
+    // console.log("error is: ");
+    // console.log(err.message);
   });
 
     
@@ -273,17 +204,16 @@ socket.on("user-connected",(data)=>{
 
 
   socket.on('user-disconnect', (data) => {
-       let cookie =  data; 
-       console.log("user disconnected "); 
+       let cookie =  data;  
     let curr_f_id = cookie.curr_f_id; 
     let u_id = s_u[socket.id]; 
     let send_data = {u_id:u_id,time:cookie.time,date:cookie.date}
-      pr("coikie<idsoconnected> is data ",cookie,"u_Id ",u_id); 
+      // pr("coikie<idsoconnected> is data ",cookie,"u_Id ",u_id); 
     //remove the client to his connected list 
     if(curr_f_id && user_connected_to_uid[curr_f_id]){
       let index = user_connected_to_uid[curr_f_id].f_list.indexOf(u_id); 
       if(index!=-1){
-        pr("**removing at index ",index); 
+        // pr("**removing at index ",index); 
         user_connected_to_uid[curr_f_id].f_list.splice(index,1); 
       }
     
@@ -311,15 +241,14 @@ socket.on("user-connected",(data)=>{
       url: process.env.API_URL + "/offline_user",
       data:send_data
     }).then(function (response) {
-      
-       console.log("cokies saved ",response.data); 
+       
      
     }).catch(err => {
-      console.log("error is: ");
-      console.log(err.message);
+      // console.log("error is: ");
+      // console.log(err.message);
     });
-    pr( "---disconnected--------u_s",u_s); 
-    pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+    // pr( "---disconnected--------u_s",u_s); 
+    // pr("s_u",s_u,"friend list ",user_connected_to_uid); 
 
   });
 
