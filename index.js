@@ -53,6 +53,7 @@ var user_connected_to_uid = {};
 io.on('connection', function (socket) {
   console.log(" -- initial new user connecte\n");
   let cookie = jwt.decode(socket.request.cookies['li']);
+  console.log("cookei data is "); 
   console.log(cookie);
 
   axios({
@@ -60,9 +61,9 @@ io.on('connection', function (socket) {
     url: process.env.API_URL + "/check_user_details",
     data: cookie
   }).then(function (response) {
-    console.log("resipo: id  ", socket.id);
+    console.log("resipo: id  ", socket.id , "response data = ");
     console.log(response.data);
-
+    console.log("<--end of response data)"); 
 
 
     if (response.data.status == "ok") {
@@ -91,7 +92,9 @@ io.on('connection', function (socket) {
   pr( "----------------u_s",u_s); 
   pr("s_u",s_u,"friend list ",user_connected_to_uid); 
 
-    } else { socket.emit("redirect"); }
+    } else { 
+      // socket.emit("redirect"); 
+    }
   }).catch(err => {
     console.log("error is: ");
     console.log(err.message);
