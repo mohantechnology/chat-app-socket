@@ -15,11 +15,11 @@ const cookieParser = require('socket.io-cookie-parser');
 var cors = require('cors')
 app.use(cors())
 io.use(cookieParser());
- 
+
 
 var port = process.env.PORT || 8000;
 
- let my_offer ;
+let my_offer;
 
 var u_s = {};  // userid to socketid
 var s_u = {};  // socketid to userid
@@ -29,25 +29,25 @@ user_connected_to_uid.f_list: store userid of friends which are currently chatti
 user_connected_to_uid.offer : sdp of this user
 */
 
-function print_session_data(){
-  
-  console.log( "u_s" )
-  console.log( u_s )
-  console.log( "s_u" )
-  console.log( s_u )
-  console.log( "user_connected_to_uid" )
-  console.log( user_connected_to_uid )
+function print_session_data() {
+
+  console.log("u_s")
+  console.log(u_s)
+  console.log("s_u")
+  console.log(s_u)
+  console.log("user_connected_to_uid")
+  console.log(user_connected_to_uid)
 }
 
 
-function intialize_empty_user_session ( ){  
-  console.log( "intialize_empty_user_session************" )
-  return { 
-    f_list: [], 
-    offer : null, 
-    on_call : false, 
+function intialize_empty_user_session() {
+  console.log("intialize_empty_user_session************")
+  return {
+    f_list: [],
+    offer: null,
+    on_call: false,
     user_data: null,
-    caller_u_id:  null , // user_id of caller 
+    caller_u_id: null, // user_id of caller 
   }
 }
 
@@ -60,150 +60,151 @@ io.on('connection', function (socket) {
   // console.log(cookie);
   // print_session_data() 
 
-socket.on("user-connected",(data)=>{
+  socket.on("user-connected", (data) => {
 
-try{ 
-
-
-  let cookie = jwt.decode(data.li );
+    try {
 
 
-// console.log( process.env.API_URL + "/check_user_details")
-
-  axios({
-    method: 'post',
-    url: process.env.API_URL + "/check_user_details",
-    data: cookie
-  }).then(function (response) {
-    // console.log("resipo: id  ", socket.id , "response data = ");
-    // console.log(response.data);
-    // console.log("<--end of response data)"); 
+      let cookie = jwt.decode(data.li);
 
 
- 
-    if (response.data.status == "ok") {
+      // console.log( process.env.API_URL + "/check_user_details")
 
-      //if user already added 
-      if(u_s[cookie.u_id]){
-   
-        delete s_u[ u_s[cookie.u_id]]; 
+      axios({
+        method: 'post',
+        url: process.env.API_URL + "/check_user_details",
+        data: cookie
+      }).then(function (response) {
+        // console.log("resipo: id  ", socket.id , "response data = ");
+        // console.log(response.data);
+        // console.log("<--end of response data)"); 
 
-      }
-      // console.log("response.data.user_data.friend_list" )
-      // console.log(response.data.user_data.friend_list )
-      s_u[socket.id] = cookie.u_id;
-      u_s[cookie.u_id] = socket.id ;
-      if (user_connected_to_uid[cookie.u_id]) {``
-      
-        let f_list = user_connected_to_uid[cookie.u_id].f_list;
-        for (let i = 0; i < f_list.length; i++) {
-          socket.broadcast.to(u_s[f_list[i]]).emit('friend-status',{id:cookie.u_id, current_status:"online"});
+
+
+        if (response.data.status == "ok") {
+
+          //if user already added 
+          if (u_s[cookie.u_id]) {
+
+            delete s_u[u_s[cookie.u_id]];
+
+          }
+          // console.log("response.data.user_data.friend_list" )
+          // console.log(response.data.user_data.friend_list )
+          s_u[socket.id] = cookie.u_id;
+          u_s[cookie.u_id] = socket.id;
+          if (user_connected_to_uid[cookie.u_id]) {
+            ``
+
+            let f_list = user_connected_to_uid[cookie.u_id].f_list;
+            for (let i = 0; i < f_list.length; i++) {
+              socket.broadcast.to(u_s[f_list[i]]).emit('friend-status', { id: cookie.u_id, current_status: "online" });
+            }
+
+          }
+          else {
+            user_connected_to_uid[cookie.u_id] = intialize_empty_user_session()
           }
 
-      }
-      else{ 
-        user_connected_to_uid[cookie.u_id] = intialize_empty_user_session( )
-      }
-      
-      user_connected_to_uid[cookie.u_id].user_data = response.data.user_data; 
-      socket.emit("setid",{id:cookie.u_id});
-  // pr("connected andd added to all "); 
-  // pr( "----------------u_s",u_s); 
-  // pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+          user_connected_to_uid[cookie.u_id].user_data = response.data.user_data;
+          socket.emit("setid", { id: cookie.u_id });
+          // pr("connected andd added to all "); 
+          // pr( "----------------u_s",u_s); 
+          // pr("s_u",s_u,"friend list ",user_connected_to_uid); 
 
 
 
-    } else { 
-      // socket.emit("redirect"); 
+        } else {
+          // socket.emit("redirect"); 
+        }
+      }).catch(err => {
+        console.log("error is: ");
+        console.log(err.message);
+      });
     }
-  }).catch(err => {
-    console.log("error is: ");
-    console.log(err.message);
-  });
-}
-catch(err){
-  console.log( err) ; 
-}
+    catch (err) {
+      console.log(err);
+    }
 
-})
+  })
 
 
 
   socket.on('typing', (data) => {
-    socket.broadcast.to(u_s[data.curr_f_id]).emit('typing',data);
+    socket.broadcast.to(u_s[data.curr_f_id]).emit('typing', data);
 
-  }); 
+  });
 
   socket.on('not-typing', (data) => {
 
-     socket.broadcast.to(u_s[data.curr_f_id]).emit('not-typing',data);
+    socket.broadcast.to(u_s[data.curr_f_id]).emit('not-typing', data);
 
 
-   }); 
- 
+  });
 
 
-//add the client to his friend u_id list 
+
+  //add the client to his friend u_id list 
   socket.on('connected-to', (data) => {
- 
- //removed the client from his previosu friend  u_id list 
- if(data.prev_f_id && user_connected_to_uid[data.prev_f_id]){
-  let index = user_connected_to_uid[data.prev_f_id].f_list.indexOf(data.u_id); 
-  if(index!=-1){
-    user_connected_to_uid[data.prev_f_id].f_list.splice(index,1); 
-  }
 
-}
- //add the client in his current friend u_id list 
-    if(user_connected_to_uid[data.curr_f_id]){
+    //removed the client from his previosu friend  u_id list 
+    if (data.prev_f_id && user_connected_to_uid[data.prev_f_id]) {
+      let index = user_connected_to_uid[data.prev_f_id].f_list.indexOf(data.u_id);
+      if (index != -1) {
+        user_connected_to_uid[data.prev_f_id].f_list.splice(index, 1);
+      }
+
+    }
+    //add the client in his current friend u_id list 
+    if (user_connected_to_uid[data.curr_f_id]) {
       user_connected_to_uid[data.curr_f_id].f_list.push(data.u_id)
-    }else{
+    } else {
       // user_connected_to_uid[data.curr_f_id] = { f_list:[data.u_id]}; 
     }
 
- 
-   
+
+
   });
-  
 
 
-  socket.on('send-message', (data) => { 
-    let f_s_id=    u_s[data.curr_f_id]; 
-    data.friend_u_id = data.curr_f_id; 
-  data.u_id = data.user_id; 
 
-    let url ; 
+  socket.on('send-message', (data) => {
+    let f_s_id = u_s[data.curr_f_id];
+    data.friend_u_id = data.curr_f_id;
+    data.u_id = data.user_id;
+
+    let url;
     // pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
     //if user is online emit rec-message and save to database 
     // print_session_data()
-    if( u_s[ data.curr_f_id] ){
+    if (u_s[data.curr_f_id]) {
       // data.is_readed=true;
       socket.broadcast.to(f_s_id).emit('rec-message', data);
-       url = "/save_readed_message"; 
-       
-    }else{
-      url = "/save_unreaded_message"; 
+      url = "/save_readed_message";
+
+    } else {
+      url = "/save_unreaded_message";
     }
-    
-  axios({
-    method: 'post',
-    url: process.env.API_URL + url,
-    data:data
-  }).then(function (response) {
-    
-    // if (response.data.status == "ok") {
-    //     pr("saved the message to url = ",url,data); 
-    // }else{
-    //   pr(" NOt abele to saved the message to url = ",url,data); 
-    // }
-   
-  }).catch(err => {
-    
-  });
 
-    
+    axios({
+      method: 'post',
+      url: process.env.API_URL + url,
+      data: data
+    }).then(function (response) {
 
-     
+      // if (response.data.status == "ok") {
+      //     pr("saved the message to url = ",url,data); 
+      // }else{
+      //   pr(" NOt abele to saved the message to url = ",url,data); 
+      // }
+
+    }).catch(err => {
+
+    });
+
+
+
+
   });
 
 
@@ -213,269 +214,268 @@ catch(err){
 
   socket.on('sent-file', (data) => {
     // pr("sendign file  to ",data);
-    let f_s_id=    u_s[data.curr_f_id]; 
-    data.friend_u_id = data.curr_f_id; 
-  data.u_id = data.user_id; 
- 
-    let url ; 
- 
-    if( u_s[ data.curr_f_id] ){
-   
+    let f_s_id = u_s[data.curr_f_id];
+    data.friend_u_id = data.curr_f_id;
+    data.u_id = data.user_id;
+
+    let url;
+
+    if (u_s[data.curr_f_id]) {
+
       socket.broadcast.to(f_s_id).emit('rec-message', data);
-       url = "/save_readed_file"; 
-       
-    }else{
-        url = "/save_unreaded_file"; 
-    }
-    
-  axios({
-    method: 'post',
-    url: process.env.API_URL + url,
-    data:data
-  }).then(function (response) {
-    
-    // if (response.data.status == "ok") {
-    //     pr("saved the message to url = ",url,data); 
-    // }else{
-    //   pr(" NOt abele to saved the rrmessage to url = ",url,data); 
-    // }
-   
-  }).catch(err => {
-    // console.log("error is: ");
-    // console.log(err.message);
-  });
+      url = "/save_readed_file";
 
-    
-
-     
-  });
-
-
-
- 
-
-  socket.on("store_candidate", (candidate) => {
-    console.log( "store_candidate"); 
-    // console.log( candidate); 
-    socket.broadcast.emit("candidate", candidate)
-});
-
-socket.on("store_offer", (data) => {
-    console.log( "store_offer"); 
-    // console.log( data); 
-    // my_offer = data ; 
-    print_session_data()
-      let cookie = jwt.decode(data.li );
-      console.log( cookie); 
-      // my_offer = data.offer ; 
-  
-      if( user_connected_to_uid[ cookie.u_id] ){ 
-
-       
-       
-         if( user_connected_to_uid[data.f_id ]){ 
-          console.log( "user_connected_to_uid[ cookie.u_id]" )
-          console.log( user_connected_to_uid[ cookie.u_id] )    
-          user_connected_to_uid[ cookie.u_id].offer = data.offer ; 
-          let user_data =    user_connected_to_uid[ cookie.u_id].user_data;  
-          let friend_data =  user_connected_to_uid[ data.f_id].user_data
-          if( isFriend(friend_data.p_id , user_data.friend_list )== false){
-            socket.emit("not-friend"); 
-             return ; 
-           }
-           
-           let output_data = { name: user_data.name,  f_id: cookie.u_id , profile_img:user_data.profile_img}
-           socket.broadcast.to(u_s[data.f_id ]).emit('calling',output_data ); 
-           user_connected_to_uid[  cookie.u_id].caller_u_id  = data.f_id ; // store friend id into self data
-           user_connected_to_uid[ data.f_id].caller_u_id = cookie.u_id ; // store calling id to friend data 
-           console.log( "stored frined uid ")
-           print_session_data()
-         }
-         else{ 
-          socket.emit("friend-is-offline"); 
-         }
-         
-      }
-      else{ 
-        socket.emit("redirect"); 
-      }
-    // console.log("user_connected_to_uid[cookie.u_id]")
-    // console.log(user_connected_to_uid[cookie.u_id])
-    // console.log("user_connected_to_uid[data.f_id] , data.f_id]= " +data.f_id)
-    // console.log(user_connected_to_uid[data.f_id])
-      // if (user_connected_to_uid[cookie.u_id]) {
-      
-      //   let f_list = user_connected_to_uid[cookie.u_id].f_list;
-      //   for (let i = 0; i < f_list.length; i++) {
-      //     socket.broadcast.to(u_s[f_list[i]]).emit('friend-status',{id:cookie.u_id, current_status:"online"});
-      //     }
-
-      // }
-    
-});
-
-socket.on("send_answer", (data) => {
-    console.log( "send_answer"); 
-    // console.log( data); 
-    socket.broadcast.emit("answer", data)
-    // socket.emit("answer", data);
-});
-
-  socket.on("end-call", (data) => {
-    console.log("end-call");
-console.log( data); 
-    try {
-      let cookie = jwt.decode(data.li);
-      console.log(cookie); 
-      if (user_connected_to_uid[cookie.u_id]) { 
-        let user_data = user_connected_to_uid[cookie.u_id]; 
-        let friend_data =  user_connected_to_uid[user_data.caller_u_id]
-        let friend_socket_id = u_s[ user_data.caller_u_id] ; 
-        console.log( user_data); 
-        console.log( "friend_socket_id"); 
-        console.log( friend_socket_id ) ; 
-        socket.to(friend_socket_id).emit("call-ended");
-          // reset session  call data  of self and friend
-        user_data.offer  = null ; 
-        user_data.on_call = false ; 
-        user_data.caller_u_id = null ; 
-
-        friend_data.offer  = null ; 
-        friend_data.on_call = false ; 
-        friend_data.caller_u_id = null ; 
-      }
-    }
-    catch (err) {
-      console.log(err);
-    }
-    // infrom  other user  that call is ended 
-
-
-    // socket.to( socket.id ).emit("take_offer", my_offer);
-    // socket.emit("answer", data);
-  });
-  
-  socket.on("call-decline", (data) => {
-    console.log("call-decline");
-console.log( data); 
-    try {
-      let cookie = jwt.decode(data.li);
-      console.log(cookie); 
-      if (user_connected_to_uid[cookie.u_id]) { 
-        let user_data = user_connected_to_uid[cookie.u_id]; 
-        let friend_data =  user_connected_to_uid[user_data.caller_u_id]
-        let friend_socket_id = u_s[ user_data.caller_u_id] ; 
-
-        socket.to(friend_socket_id).emit("call-decline");
-          // reset session  call data  of self and friend
-
-        friend_data.offer  = null ; 
-        friend_data.on_call = false ; 
-        friend_data.caller_u_id = null ; 
-      }
-    }
-    catch (err) {
-      console.log(err);
-    }
-    // infrom  other user  that call is ended 
-
-
-    // socket.to( socket.id ).emit("take_offer", my_offer);
-    // socket.emit("answer", data);
-  });
-
-socket.on("send_candidate", (data) => {
-    console.log( "send_candidate"); 
-    // console.log( data); 
-    // socket.emit("candidate", data);
-    socket.broadcast.emit("candidate", data);
-});
-
-socket.on("join_call", (data) => {
-    console.log( "join_call"); 
-    // console.log( data); 
-    print_session_data(); 
-    console.log( socket.id ) ;
-    console.log( "user_connected_to_uid[ cookie.u_id]" )
-    console.log( user_connected_to_uid[ cookie.u_id] )
- 
-    // socket.to( socket.id ).emit("take_offer", my_offer);
-    let offer ; 
-
-    try { 
-      if( user_connected_to_uid[ cookie.u_id] ){ 
-        let user_data =    user_connected_to_uid[ cookie.u_id];  
-        let friend_data =  user_connected_to_uid[ user_data.caller_u_id] ; 
-         
-           socket.emit("take_offer", friend_data.offer);
-        }
-        else{ 
-          socket.emit("redirect"); 
-        }
-     }
-
-    catch(err){
-      console.log(err)
-    }
-   
-    
-
-});
-
-
-
-  socket.on('user-disconnect', (data) => {
-    console.log( "user-disconnect")
-    console.log( "socket.id")
-    console.log( socket.id);
-       let cookie =  data;  
-    let curr_f_id = cookie.curr_f_id; 
-    let u_id = s_u[socket.id]; 
-    let send_data = {u_id:u_id,time:cookie.time,date:cookie.date}
-      // pr("coikie<idsoconnected> is data ",cookie,"u_Id ",u_id); 
-    //remove the client to his connected list 
-    if(curr_f_id && user_connected_to_uid[curr_f_id]){
-      let index = user_connected_to_uid[curr_f_id].f_list.indexOf(u_id); 
-      if(index!=-1){
-        // pr("**removing at index ",index); 
-        user_connected_to_uid[curr_f_id].f_list.splice(index,1); 
-      }
-    
+    } else {
+      url = "/save_unreaded_file";
     }
 
-// let a = []; 
-// a.
-
-    // delete socket_to_detail[socket.id];
-    // 
-    // delete u_id_to_detail[cookie.u_id];
-    
-    if (user_connected_to_uid[u_id]) {
-      let f_list = user_connected_to_uid[u_id].f_list;
-      for (let i = 0; i < f_list.length; i++) {
-        socket.broadcast.to(u_s[f_list[i]]).emit('friend-status',{id:u_id, current_status:"Last seen on "+(cookie.date)+" at "+(cookie.time)});
-      }
-    }
-    delete u_s[u_id]; 
-    delete s_u[socket.id];
-    delete user_connected_to_uid[u_id] ; 
-    // print_session_data()
-//update  user as offline 
-// pr("curent cookie si: ",cookie) ; 
     axios({
       method: 'post',
-      url: process.env.API_URL + "/offline_user",
-      data:send_data
+      url: process.env.API_URL + url,
+      data: data
     }).then(function (response) {
-       
-     
+
+      // if (response.data.status == "ok") {
+      //     pr("saved the message to url = ",url,data); 
+      // }else{
+      //   pr(" NOt abele to saved the rrmessage to url = ",url,data); 
+      // }
+
     }).catch(err => {
       // console.log("error is: ");
       // console.log(err.message);
     });
-    // pr( "---disconnected--------u_s",u_s); 
-    // pr("s_u",s_u,"friend list ",user_connected_to_uid); 
 
+
+
+
+  });
+
+
+
+
+
+  socket.on("store_candidate", (candidate) => {
+    console.log("store_candidate");
+    // console.log( candidate); 
+    socket.broadcast.emit("candidate", candidate)
+  });
+
+  socket.on("store_offer", (data) => {
+    try {
+      console.log("store_offer");
+      // console.log( data); 
+      // my_offer = data ; 
+      print_session_data()
+      let cookie = jwt.decode(data.li);
+      console.log(cookie);
+      // my_offer = data.offer ; 
+
+      if (user_connected_to_uid[cookie.u_id]) {
+
+
+
+        if (user_connected_to_uid[data.f_id]) {
+          console.log("user_connected_to_uid[ cookie.u_id]")
+          console.log(user_connected_to_uid[cookie.u_id])
+          user_connected_to_uid[cookie.u_id].offer = data.offer;
+          let user_data = user_connected_to_uid[cookie.u_id].user_data;
+          let friend_data = user_connected_to_uid[data.f_id].user_data
+          if (isFriend(friend_data.p_id, user_data.friend_list) == false) {
+            socket.emit("not-friend");
+            return;
+          }
+
+          let output_data = { name: user_data.name, f_id: cookie.u_id, profile_img: user_data.profile_img }
+          socket.broadcast.to(u_s[data.f_id]).emit('calling', output_data);
+          user_connected_to_uid[cookie.u_id].caller_u_id = data.f_id; // store friend id into self data
+          user_connected_to_uid[data.f_id].caller_u_id = cookie.u_id; // store calling id to friend data 
+          console.log("stored frined uid ")
+          print_session_data()
+        }
+        else {
+          socket.emit("friend-is-offline");
+        }
+
+      }
+      else {
+        socket.emit("redirect");
+      }
+
+
+    } catch (err) {
+      console.log(err);
+    }
+
+  });
+
+  socket.on("send_answer", (data) => {
+    console.log("send_answer");
+    // console.log( data); 
+    socket.broadcast.emit("answer", data)
+    // socket.emit("answer", data);
+  });
+
+  socket.on("end-call", (data) => {
+    console.log("end-call");
+    console.log(data);
+    try {
+      let cookie = jwt.decode(data.li);
+      console.log(cookie);
+      if (user_connected_to_uid[cookie.u_id]) {
+        let user_data = user_connected_to_uid[cookie.u_id];
+        let friend_data = user_connected_to_uid[user_data.caller_u_id]
+        let friend_socket_id = u_s[user_data.caller_u_id];
+        console.log(user_data);
+        console.log("friend_socket_id");
+        console.log(friend_socket_id);
+        socket.to(friend_socket_id).emit("call-ended");
+        // reset session  call data  of self and friend
+        user_data.offer = null;
+        user_data.on_call = false;
+        user_data.caller_u_id = null;
+
+        friend_data.offer = null;
+        friend_data.on_call = false;
+        friend_data.caller_u_id = null;
+      }
+    }
+    catch (err) {
+      console.log(err);
+    }
+    // infrom  other user  that call is ended 
+
+
+    // socket.to( socket.id ).emit("take_offer", my_offer);
+    // socket.emit("answer", data);
+  });
+
+  socket.on("call-decline", (data) => {
+    console.log("call-decline");
+    console.log(data);
+    try {
+      let cookie = jwt.decode(data.li);
+      console.log(cookie);
+      if (user_connected_to_uid[cookie.u_id]) {
+        let user_data = user_connected_to_uid[cookie.u_id];
+        let friend_data = user_connected_to_uid[user_data.caller_u_id]
+        let friend_socket_id = u_s[user_data.caller_u_id];
+
+        socket.to(friend_socket_id).emit("call-decline");
+        // reset session  call data  of self and friend
+
+        friend_data.offer = null;
+        friend_data.on_call = false;
+        friend_data.caller_u_id = null;
+      }
+    }
+    catch (err) {
+      console.log(err);
+    }
+    // infrom  other user  that call is ended 
+
+
+    // socket.to( socket.id ).emit("take_offer", my_offer);
+    // socket.emit("answer", data);
+  });
+
+  socket.on("send_candidate", (data) => {
+    console.log("send_candidate");
+    // console.log( data); 
+    // socket.emit("candidate", data);
+    socket.broadcast.emit("candidate", data);
+  });
+
+  socket.on("join_call", (data) => {
+    console.log("join_call");
+    // console.log( data); 
+    print_session_data();
+    console.log(socket.id);
+    console.log("user_connected_to_uid[ cookie.u_id]")
+    console.log(user_connected_to_uid[cookie.u_id])
+
+    // socket.to( socket.id ).emit("take_offer", my_offer);
+    let offer;
+
+    try {
+      if (user_connected_to_uid[cookie.u_id]) {
+        let user_data = user_connected_to_uid[cookie.u_id];
+        let friend_data = user_connected_to_uid[user_data.caller_u_id];
+
+        socket.emit("take_offer", friend_data.offer);
+      }
+      else {
+        socket.emit("redirect");
+      }
+    }
+
+    catch (err) {
+      console.log(err)
+    }
+
+
+
+  });
+
+
+
+  socket.on('user-disconnect', (data) => {
+    console.log("user-disconnect")
+    console.log("socket.id")
+    console.log(socket.id);
+    try {
+
+
+      let cookie = data;
+      let curr_f_id = cookie.curr_f_id;
+      let u_id = s_u[socket.id];
+      let send_data = { u_id: u_id, time: cookie.time, date: cookie.date }
+      // pr("coikie<idsoconnected> is data ",cookie,"u_Id ",u_id); 
+      //remove the client to his connected list 
+      if (curr_f_id && user_connected_to_uid[curr_f_id]) {
+        let index = user_connected_to_uid[curr_f_id].f_list.indexOf(u_id);
+        if (index != -1) {
+          // pr("**removing at index ",index); 
+          user_connected_to_uid[curr_f_id].f_list.splice(index, 1);
+        }
+
+      }
+
+      // let a = []; 
+      // a.
+
+      // delete socket_to_detail[socket.id];
+      // 
+      // delete u_id_to_detail[cookie.u_id];
+
+      if (user_connected_to_uid[u_id]) {
+        let f_list = user_connected_to_uid[u_id].f_list;
+        for (let i = 0; i < f_list.length; i++) {
+          socket.broadcast.to(u_s[f_list[i]]).emit('friend-status', { id: u_id, current_status: "Last seen on " + (cookie.date) + " at " + (cookie.time) });
+        }
+      }
+      delete u_s[u_id];
+      delete s_u[socket.id];
+      delete user_connected_to_uid[u_id];
+      // print_session_data()
+      //update  user as offline 
+      // pr("curent cookie si: ",cookie) ; 
+      axios({
+        method: 'post',
+        url: process.env.API_URL + "/offline_user",
+        data: send_data
+      }).then(function (response) {
+
+
+      }).catch(err => {
+        // console.log("error is: ");
+        // console.log(err.message);
+      });
+      // pr( "---disconnected--------u_s",u_s); 
+      // pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+    } catch (err) {
+      console.log(err);
+    }
   });
 
 
@@ -487,14 +487,19 @@ http.listen(port, function () {
 
 
 
-function isFriend(friend_u_id, friend_list ) { 
+function isFriend(friend_u_id, friend_list) {
 
-  for( let i=0; i< friend_list.length ; i++){ 
-    if( friend_list[i].sender_p_id == friend_u_id ){
-      return true; 
+  try{
+     for (let i = 0; i < friend_list.length; i++) {
+    if (friend_list[i].sender_p_id == friend_u_id) {
+      return true;
     }
   }
-  return false; 
+  return false;
+}catch(err){ 
+  return false;
+}
+ 
 
 }
 
