@@ -354,6 +354,35 @@ console.log( data);
     // socket.to( socket.id ).emit("take_offer", my_offer);
     // socket.emit("answer", data);
   });
+  
+  socket.on("call-decline", (data) => {
+    console.log("call-decline");
+console.log( data); 
+    try {
+      let cookie = jwt.decode(data.li);
+      console.log(cookie); 
+      if (user_connected_to_uid[cookie.u_id]) { 
+        let user_data = user_connected_to_uid[cookie.u_id]; 
+        let friend_data =  user_connected_to_uid[user_data.caller_u_id]
+        let friend_socket_id = u_s[ user_data.caller_u_id] ; 
+
+        socket.to(friend_socket_id).emit("call-decline");
+          // reset session  call data  of self and friend
+
+        friend_data.offer  = null ; 
+        friend_data.on_call = false ; 
+        friend_data.caller_u_id = null ; 
+      }
+    }
+    catch (err) {
+      console.log(err);
+    }
+    // infrom  other user  that call is ended 
+
+
+    // socket.to( socket.id ).emit("take_offer", my_offer);
+    // socket.emit("answer", data);
+  });
 
 socket.on("send_candidate", (data) => {
     console.log( "send_candidate"); 
