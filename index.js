@@ -41,11 +41,13 @@ function print_session_data(){
 
 
 function intialize_empty_user_session ( ){  
+  console.log( "intialize_empty_user_session************" )
   return { 
     f_list: [], 
     offer : null, 
     on_call : false, 
-    user_data: null, 
+    user_data: null,
+    caller_u_id:  null , // user_id of caller 
   }
 }
 
@@ -54,25 +56,28 @@ io.on('connection', function (socket) {
   // let parsed_cookie = cookie.parse(socket.handshake.headers.cookie);    
   // console.log( parsed_cookie)
   let cookie = jwt.decode(socket.request.cookies['li']);
-  console.log("cookei data is "); 
-  console.log(cookie);
-  print_session_data() 
+  // console.log("cookei data is "); 
+  // console.log(cookie);
+  // print_session_data() 
+
 socket.on("user-connected",(data)=>{
+
+try{ 
 
 
   let cookie = jwt.decode(data.li );
 
 
-console.log( process.env.API_URL + "/check_user_details")
+// console.log( process.env.API_URL + "/check_user_details")
 
   axios({
     method: 'post',
     url: process.env.API_URL + "/check_user_details",
     data: cookie
   }).then(function (response) {
-    console.log("resipo: id  ", socket.id , "response data = ");
-    console.log(response.data);
-    console.log("<--end of response data)"); 
+    // console.log("resipo: id  ", socket.id , "response data = ");
+    // console.log(response.data);
+    // console.log("<--end of response data)"); 
 
 
  
@@ -84,11 +89,11 @@ console.log( process.env.API_URL + "/check_user_details")
         delete s_u[ u_s[cookie.u_id]]; 
 
       }
-      console.log("response.data.user_data.friend_list" )
-      console.log(response.data.user_data.friend_list )
+      // console.log("response.data.user_data.friend_list" )
+      // console.log(response.data.user_data.friend_list )
       s_u[socket.id] = cookie.u_id;
       u_s[cookie.u_id] = socket.id ;
-      if (user_connected_to_uid[cookie.u_id]) {
+      if (user_connected_to_uid[cookie.u_id]) {``
       
         let f_list = user_connected_to_uid[cookie.u_id].f_list;
         for (let i = 0; i < f_list.length; i++) {
@@ -115,7 +120,10 @@ console.log( process.env.API_URL + "/check_user_details")
     console.log("error is: ");
     console.log(err.message);
   });
-
+}
+catch(err){
+  console.log( err) ; 
+}
 
 })
 
@@ -167,7 +175,7 @@ console.log( process.env.API_URL + "/check_user_details")
     let url ; 
     // pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
     //if user is online emit rec-message and save to database 
-    print_session_data()
+    // print_session_data()
     if( u_s[ data.curr_f_id] ){
       // data.is_readed=true;
       socket.broadcast.to(f_s_id).emit('rec-message', data);
@@ -259,7 +267,7 @@ socket.on("store_offer", (data) => {
     print_session_data()
       let cookie = jwt.decode(data.li );
       console.log( cookie); 
-      my_offer = data.offer ; 
+      // my_offer = data.offer ; 
   
       if( user_connected_to_uid[ cookie.u_id] ){ 
 
@@ -278,6 +286,10 @@ socket.on("store_offer", (data) => {
            
            let output_data = { name: user_data.name,  f_id: cookie.u_id , profile_img:user_data.profile_img}
            socket.broadcast.to(u_s[data.f_id ]).emit('calling',output_data ); 
+           user_connected_to_uid[  cookie.u_id].caller_u_id  = data.f_id ; // store friend id into self data
+           user_connected_to_uid[ data.f_id].caller_u_id = cookie.u_id ; // store calling id to friend data 
+           console.log( "stored frined uid ")
+           print_session_data()
          }
          else{ 
           socket.emit("friend-is-offline"); 
@@ -287,10 +299,10 @@ socket.on("store_offer", (data) => {
       else{ 
         socket.emit("redirect"); 
       }
-    console.log("user_connected_to_uid[cookie.u_id]")
-    console.log(user_connected_to_uid[cookie.u_id])
-    console.log("user_connected_to_uid[data.f_id] , data.f_id]= " +data.f_id)
-    console.log(user_connected_to_uid[data.f_id])
+    // console.log("user_connected_to_uid[cookie.u_id]")
+    // console.log(user_connected_to_uid[cookie.u_id])
+    // console.log("user_connected_to_uid[data.f_id] , data.f_id]= " +data.f_id)
+    // console.log(user_connected_to_uid[data.f_id])
       // if (user_connected_to_uid[cookie.u_id]) {
       
       //   let f_list = user_connected_to_uid[cookie.u_id].f_list;
@@ -309,12 +321,39 @@ socket.on("send_answer", (data) => {
     // socket.emit("answer", data);
 });
 
-socket.on("end-call", (data) => {
-  console.log( "end-call"); 
-  // console.log( data); 
-  // socket.broadcast.emit("answer", data)
-  // socket.emit("answer", data);
-});
+  socket.on("end-call", (data) => {
+    console.log("end-call");
+console.log( data); 
+    try {
+      let cookie = jwt.decode(data.li);
+      console.log(cookie); 
+      if (user_connected_to_uid[cookie.u_id]) { 
+        let user_data = user_connected_to_uid[cookie.u_id]; 
+        let friend_data =  user_connected_to_uid[user_data.caller_u_id]
+        let friend_socket_id = u_s[ user_data.caller_u_id] ; 
+        console.log( user_data); 
+        console.log( "friend_socket_id"); 
+        console.log( friend_socket_id ) ; 
+        socket.to(friend_socket_id).emit("call-ended");
+          // reset session  call data  of self and friend
+        user_data.offer  = null ; 
+        user_data.on_call = false ; 
+        user_data.caller_u_id = null ; 
+
+        friend_data.offer  = null ; 
+        friend_data.on_call = false ; 
+        friend_data.caller_u_id = null ; 
+      }
+    }
+    catch (err) {
+      console.log(err);
+    }
+    // infrom  other user  that call is ended 
+
+
+    // socket.to( socket.id ).emit("take_offer", my_offer);
+    // socket.emit("answer", data);
+  });
 
 socket.on("send_candidate", (data) => {
     console.log( "send_candidate"); 
@@ -326,9 +365,32 @@ socket.on("send_candidate", (data) => {
 socket.on("join_call", (data) => {
     console.log( "join_call"); 
     // console.log( data); 
-    console.log( socket.id ) ; 
+    print_session_data(); 
+    console.log( socket.id ) ;
+    console.log( "user_connected_to_uid[ cookie.u_id]" )
+    console.log( user_connected_to_uid[ cookie.u_id] )
+ 
     // socket.to( socket.id ).emit("take_offer", my_offer);
-    socket.emit("take_offer", my_offer);
+    let offer ; 
+
+    try { 
+      if( user_connected_to_uid[ cookie.u_id] ){ 
+        let user_data =    user_connected_to_uid[ cookie.u_id];  
+        let friend_data =  user_connected_to_uid[ user_data.caller_u_id] ; 
+         
+           socket.emit("take_offer", friend_data.offer);
+        }
+        else{ 
+          socket.emit("redirect"); 
+        }
+     }
+
+    catch(err){
+      console.log(err)
+    }
+   
+    
+
 });
 
 
