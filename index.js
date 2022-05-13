@@ -294,7 +294,7 @@ io.on('connection', function (socket) {
           print_session_data()
         }
         else {
-          socket.emit("friend-is-offline");
+          socket.emit("friend-is-offlinein sotre offer");
         }
 
       }
@@ -389,7 +389,7 @@ io.on('connection', function (socket) {
   socket.on("join_call", (data) => {
     console.log("join_call");
     // console.log( data); 
-    print_session_data();
+    // print_session_data();
     // console.log(socket.id);
     // console.log("user_connected_to_uid[ cookie.u_id]")
     // console.log(user_connected_to_uid[cookie.u_id])
@@ -398,7 +398,12 @@ io.on('connection', function (socket) {
     let offer;
 
     try {
-      let cookie = data;
+      let cookie = jwt.decode(data.li);
+      console.log( "cookie ")
+      console.log( cookie )
+      console.log( "data ")
+      console.log( data )
+
       if (user_connected_to_uid[cookie.u_id]) {
         let user_data = user_connected_to_uid[cookie.u_id];
         let friend_data = user_connected_to_uid[user_data.caller_u_id];
