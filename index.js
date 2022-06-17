@@ -2,7 +2,9 @@ require('dotenv').config();
 var app = require('express')();
 // var cookieParser = require("cookie") 
 var http = require('http').Server(app);
-var io = require('socket.io')(http);
+var io = require('socket.io')(http, { cors: {
+  origin: "http://localhost:3000"
+}});
 const axios = require('axios');
 const { createSocket } = require('dgram');
 const jwt = require("jsonwebtoken");
@@ -12,10 +14,42 @@ const cookieParser = require('socket.io-cookie-parser');
 
 
 
-var cors = require('cors')
-app.use(cors())
+var cors = require('cors');
+const { fstat } = require('fs');
+const { json } = require('express');
+// app.use(cors())
 io.use(cookieParser());
 
+
+io.use((socket, next) => {
+
+  // console.log(  socket.request.cookies['sid'])
+  // console.log(  socket.user)
+  // return next();
+  console.log("inside middleware********")
+  // next(new Error("redirect"));
+  const token = socket.request.cookies['sid'];
+  if (!token) {
+    console.log("!token")
+
+    return socket.emit("redirect");
+  }
+  try {
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    socket.user = decoded;
+    socket.user.u_id = decoded.uId;
+    socket.user.sid = token;
+  } catch (err) {
+    console.log(err)
+  
+    return socket.emit("redirect");
+
+  }
+  console.log("moving to next")
+  return next();
+
+})
 
 var port = process.env.PORT || 8000;
 
@@ -51,6 +85,24 @@ function intialize_empty_user_session() {
   }
 }
 
+// Event 'uncaughtException'
+process.on('uncaughtException', (error) => {
+  // fs.writeSync(process.stderr.fd, error);
+  console.log( "******error*******")
+  console.log(error)
+});
+
+app.get('/', (req, res) => {
+  let x = {}; 
+
+  // throw new Error("<-------- error -------->")
+  // fs.readfile();
+  // app.get().set(); 
+  res.send('connected with get request')
+  process.exit(1);  
+
+})
+
 io.on('connection', function (socket) {
   console.log(" -- initial new user connecte\n");
   // let parsed_cookie = cookie.parse(socket.handshake.headers.cookie);    
@@ -60,67 +112,112 @@ io.on('connection', function (socket) {
   // console.log(cookie);
   // print_session_data() 
 
-  socket.on("user-connected", (data) => {
+  socket.on("user-connected", async (data) => {
 
     try {
+      console.log("data");
+      console.log (data);
+ 
+      console.log("socket.user");
+      console.log(socket.user);
 
+      // let cookie =  jwt.verify(data.sid, process.env.JWT_SECRET_KEY) ;
+      let cookie =  socket.user;
+      
+      console.log("cookie");
+      console.log(cookie);
+      if( !cookie){ 
+        socket.emit("redirect"); 
+      }
+  
 
-      let cookie = jwt.decode(data.li);
+     
 
+        //if user already added 
+        if (u_s[cookie.u_id]) {
 
-      // console.log( process.env.API_URL + "/check_user_details")
+          delete s_u[u_s[cookie.u_id]];
 
-      axios({
-        method: 'post',
-        url: process.env.API_URL + "/check_user_details",
-        data: cookie
-      }).then(function (response) {
-        // console.log("resipo: id  ", socket.id , "response data = ");
-        // console.log(response.data);
-        // console.log("<--end of response data)"); 
-
-
-
-        if (response.data.status == "ok") {
-
-          //if user already added 
-          if (u_s[cookie.u_id]) {
-
-            delete s_u[u_s[cookie.u_id]];
-
-          }
-          // console.log("response.data.user_data.friend_list" )
-          // console.log(response.data.user_data.friend_list )
-          s_u[socket.id] = cookie.u_id;
-          u_s[cookie.u_id] = socket.id;
-          if (user_connected_to_uid[cookie.u_id]) {
-            ``
-
-            let f_list = user_connected_to_uid[cookie.u_id].f_list;
-            for (let i = 0; i < f_list.length; i++) {
-              socket.broadcast.to(u_s[f_list[i]]).emit('friend-status', { id: cookie.u_id, current_status: "online" });
-            }
-
-          }
-          else {
-            user_connected_to_uid[cookie.u_id] = intialize_empty_user_session()
-          }
-
-          user_connected_to_uid[cookie.u_id].user_data = response.data.user_data;
-          socket.emit("setid", { id: cookie.u_id });
-          // pr("connected andd added to all "); 
-          // pr( "----------------u_s",u_s); 
-          // pr("s_u",s_u,"friend list ",user_connected_to_uid); 
-
-
-
-        } else {
-          // socket.emit("redirect"); 
         }
-      }).catch(err => {
-        console.log("error is: ");
-        console.log(err.message);
-      });
+        // console.log("response.data.user_data.friend_list" )
+        // console.log(response.data.user_data.friend_list )
+        s_u[socket.id] = cookie.u_id;
+        u_s[cookie.u_id] = socket.id;
+        if (user_connected_to_uid[cookie.u_id]) {
+        
+          let f_list = user_connected_to_uid[cookie.u_id].f_list;
+          for (let i = 0; i < f_list.length; i++) {
+            socket.broadcast.to(u_s[f_list[i]]).emit('friend-status', { id: cookie.u_id, current_status: "online" });
+          }
+
+        }
+        else {
+          user_connected_to_uid[cookie.u_id] = intialize_empty_user_session()
+        }
+
+        user_connected_to_uid[cookie.u_id].user_data = cookie;
+        socket.emit("setid", { id: cookie.u_id });
+        
+        console.log("connected andd added to all "); 
+        print_session_data();
+        // pr("connected andd added to all "); 
+        // pr( "----------------u_s",u_s); 
+        // pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+ 
+ 
+
+      return ; 
+      // axios({
+      //   method: 'post',
+      //   url: process.env.API_URL + "/check_user_details",
+      //   data: cookie
+      // }).then(function (response) {
+      //   // console.log("resipo: id  ", socket.id , "response data = ");
+      //   // console.log(response.data);
+      //   // console.log("<--end of response data)"); 
+
+
+
+      //   if (response.data.status == "ok") {
+
+      //     //if user already added 
+      //     if (u_s[cookie.u_id]) {
+
+      //       delete s_u[u_s[cookie.u_id]];
+
+      //     }
+      //     // console.log("response.data.user_data.friend_list" )
+      //     // console.log(response.data.user_data.friend_list )
+      //     s_u[socket.id] = cookie.u_id;
+      //     u_s[cookie.u_id] = socket.id;
+      //     if (user_connected_to_uid[cookie.u_id]) {
+            
+
+      //       let f_list = user_connected_to_uid[cookie.u_id].f_list;
+      //       for (let i = 0; i < f_list.length; i++) {
+      //         socket.broadcast.to(u_s[f_list[i]]).emit('friend-status', { id: cookie.u_id, current_status: "online" });
+      //       }
+
+      //     }
+      //     else {
+      //       user_connected_to_uid[cookie.u_id] = intialize_empty_user_session()
+      //     }
+
+      //     user_connected_to_uid[cookie.u_id].user_data = response.data.user_data;
+      //     socket.emit("setid", { id: cookie.u_id });
+      //     // pr("connected andd added to all "); 
+      //     // pr( "----------------u_s",u_s); 
+      //     // pr("s_u",s_u,"friend list ",user_connected_to_uid); 
+
+
+
+      //   } else {
+      //     // socket.emit("redirect"); 
+      //   }
+      // }).catch(err => {
+      //   console.log("error is: ");
+      //   console.log(err.message);
+      // });
     }
     catch (err) {
       console.log(err);
@@ -130,12 +227,14 @@ io.on('connection', function (socket) {
 
 
 
-  socket.on('typing', (data) => {
+  socket.on('typing', async (data) => {
     socket.broadcast.to(u_s[data.curr_f_id]).emit('typing', data);
-
+   print_session_data(); 
+   console.log( "socket.user")
+   console.log( socket.user)
   });
 
-  socket.on('not-typing', (data) => {
+  socket.on('not-typing', async (data) => {
 
     socket.broadcast.to(u_s[data.curr_f_id]).emit('not-typing', data);
 
@@ -145,7 +244,7 @@ io.on('connection', function (socket) {
 
 
   //add the client to his friend u_id list 
-  socket.on('connected-to', (data) => {
+  socket.on('connected-to', async (data) => {
 
     //removed the client from his previosu friend  u_id list 
     if (data.prev_f_id && user_connected_to_uid[data.prev_f_id]) {
@@ -168,41 +267,81 @@ io.on('connection', function (socket) {
 
 
 
-  socket.on('send-message', (data) => {
+  socket.on('send-message', async (data) => {
+    console.log( "data") ;
+    console.log( data) ;
     let f_s_id = u_s[data.curr_f_id];
     data.friend_u_id = data.curr_f_id;
-    data.u_id = data.user_id;
+    // data.u_id = data.user_id;
+    let  messageData =  {
+      "receiver": {
+          "uId": data.curr_f_id ,
+          // "currentStatus": "offline"
+      },
+      "message": data.message,
+      "messageType": "text", 
+      
+  }
 
-    let url;
-    // pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
+    console.log( "messageData") ;
+    console.log( messageData) ;
+
+    console.log( " s_u[socket.id] ") ;
+    console.log(  s_u[socket.id] ) ;
+
+       console.log( " s_u[socket.id] ") ;
+    console.log(  s_u[socket.id] ) ;
+
+             console.log( " user_connected_to_uid  ") ;
+    console.log(  user_connected_to_uid  ) ;
+
+    console.log( " socket.user  ") ;
+    console.log(  socket.user  ) ;
+
+
+    console.log( " data  ") ;
+    console.log(  data  ) ;
+
+
+     // pr("fs_did" ,f_s_id,"uerid to detail ", u_id_to_detail[ f_s_id])
     //if user is online emit rec-message and save to database 
     // print_session_data()
-    if (u_s[data.curr_f_id]) {
-      // data.is_readed=true;
+    if (u_s[data.curr_f_id]) { 
+      // emit message directly to friend if he is online 
+       data.createdBy = "friend"; 
       socket.broadcast.to(f_s_id).emit('rec-message', data);
-      url = "/save_readed_message";
+      messageData.receiver.currentStatus = "online"; 
 
     } else {
-      url = "/save_unreaded_message";
+      messageData.receiver.currentStatus = "offline"; 
+     
     }
 
-    axios({
+
+  try{ 
+
+    let response = await axios({
       method: 'post',
-      url: process.env.API_URL + url,
-      data: data
-    }).then(function (response) {
+      url: process.env.API_URL + "/save_message",
+      data: (messageData),
+      headers: {
+        "Content-type": "application/json",
+        "x-access-token": socket.user.sid
+      },  
+     });   
+     console.log( "response") 
+     console.log( response.data) 
 
-      // if (response.data.status == "ok") {
-      //     pr("saved the message to url = ",url,data); 
-      // }else{
-      //   pr(" NOt abele to saved the message to url = ",url,data); 
-      // }
-
-    }).catch(err => {
-
-    });
+  }
+  catch (err){ 
+    console.log( "error*****")  ;; 
+    console.log( err.response && err.response.data ?err.response.data :err  )  ;; 
+  }
 
 
+    
+   
+    
 
 
   });
@@ -212,7 +351,7 @@ io.on('connection', function (socket) {
 
 
 
-  socket.on('sent-file', (data) => {
+  socket.on('sent-file', async (data) => {
     // pr("sendign file  to ",data);
     let f_s_id = u_s[data.curr_f_id];
     data.friend_u_id = data.curr_f_id;
@@ -261,7 +400,7 @@ io.on('connection', function (socket) {
     socket.broadcast.emit("candidate", candidate)
   });
 
-  socket.on("store_offer", (data) => {
+  socket.on("store_offer", async (data) => {
     try {
       console.log("store_offer");
       // console.log( data); 
@@ -309,16 +448,16 @@ io.on('connection', function (socket) {
 
   });
 
-  socket.on("send_answer", (data) => {
+  socket.on("send_answer", async (data) => {
     console.log("send_answer");
-    // console.log( data); 
+    console.log( data); 
     socket.broadcast.emit("answer", data)
     // socket.emit("answer", data);
   });
 
-  socket.on("end-call", (data) => {
+  socket.on("end-call", async (data) => {
     console.log("end-call");
-    console.log(data);
+    console.log (data);
     try {
       let cookie = jwt.decode(data.li);
       console.log(cookie);
@@ -350,9 +489,9 @@ io.on('connection', function (socket) {
     // socket.emit("answer", data);
   });
 
-  socket.on("call-decline", (data) => {
+  socket.on("call-decline", async (data) => {
     console.log("call-decline");
-    console.log(data);
+    console.log (data);
     try {
       let cookie = jwt.decode(data.li);
       console.log(cookie);
@@ -379,14 +518,14 @@ io.on('connection', function (socket) {
     // socket.emit("answer", data);
   });
 
-  socket.on("send_candidate", (data) => {
+  socket.on("send_candidate", async (data) => {
     console.log("send_candidate");
     // console.log( data); 
     // socket.emit("candidate", data);
     socket.broadcast.emit("candidate", data);
   });
 
-  socket.on("join_call", (data) => {
+  socket.on("join_call", async (data) => {
     console.log("join_call");
     // console.log( data); 
     // print_session_data();
@@ -425,7 +564,7 @@ io.on('connection', function (socket) {
 
 
 
-  socket.on('user-disconnect', (data) => {
+  socket.on('user-disconnect', async (data) => {
     console.log("user-disconnect")
     console.log("socket.id")
     console.log(socket.id);
