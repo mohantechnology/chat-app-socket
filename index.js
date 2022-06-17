@@ -152,7 +152,8 @@ io.on('connection', function (socket) {
         }
 
         user_connected_to_uid[cookie.u_id].user_data = cookie;
-        socket.emit("setid", { id: cookie.u_id });
+        // socket.emit("setid", { id: cookie.u_id });
+        socket.emit("connection-sucess", { id: cookie.u_id });
         
         console.log("connected andd added to all "); 
         print_session_data();
@@ -311,6 +312,7 @@ io.on('connection', function (socket) {
     if (u_s[data.curr_f_id]) { 
       // emit message directly to friend if he is online 
        data.createdBy = "friend"; 
+       data.user_id  =  socket.user.uId ; // user_id of user who sended this message
       socket.broadcast.to(f_s_id).emit('rec-message', data);
       messageData.receiver.currentStatus = "online"; 
 
