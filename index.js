@@ -2,9 +2,10 @@ require('dotenv').config();
 var app = require('express')();
 // var cookieParser = require("cookie") 
 var http = require('http').Server(app);
-var io = require('socket.io')(http, { cors: {
-  origin: "http://localhost:3000"
-}});
+// var io = require('socket.io')(http, { cors: {
+//   origin: "http://localhost:3000"
+// }});
+var io = require('socket.io')(http);
 const axios = require('axios');
 const { createSocket } = require('dgram');
 const jwt = require("jsonwebtoken");
@@ -93,15 +94,10 @@ process.on('uncaughtException', (error) => {
 });
 
 app.get('/', (req, res) => {
-  let x = {}; 
-
-  // throw new Error("<-------- error -------->")
-  // fs.readfile();
-  // app.get().set(); 
-  res.send('connected with get request')
-  process.exit(1);  
+ res.status(200).json({message:"Connected Successfully"})
 
 })
+ 
 
 io.on('connection', function (socket) {
   console.log(" -- initial new user connecte\n");
@@ -278,9 +274,15 @@ io.on('connection', function (socket) {
           "uId": data.curr_f_id ,
           // "currentStatus": "offline"
       },
-      "message": data.message,
-      "messageType": "text", 
+      "message": data.message || " ",
+      "messageType": data.messageType || "text", 
+       result: true , 
       
+  }
+  /* if file then add file details */
+  if(  data.messageType == "file" ){
+    messageData.fileName= data.fileName; 
+    messageData.mimeType= data.mimeType; 
   }
 
     console.log( "messageData") ;
