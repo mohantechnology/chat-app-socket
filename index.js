@@ -410,7 +410,7 @@ io.on('connection', function (socket) {
       // console.log( data); 
       // my_offer = data ; 
       print_session_data()
-      let cookie = jwt.decode(data.li);
+      let cookie = socket.user ; 
       console.log(cookie);
       // my_offer = data.offer ; 
 
@@ -424,12 +424,12 @@ io.on('connection', function (socket) {
           user_connected_to_uid[cookie.u_id].offer = data.offer;
           let user_data = user_connected_to_uid[cookie.u_id].user_data;
           let friend_data = user_connected_to_uid[data.f_id].user_data
-          if (isFriend(friend_data.p_id, user_data.friend_list) == false) {
-            socket.emit("not-friend");
-            return;
-          }
+          // if (isFriend(friend_data.p_id, user_data.friend_list) == false) {
+          //   socket.emit("not-friend");
+          //   return;
+          // }
 
-          let output_data = { name: user_data.name, f_id: cookie.u_id, profile_img: user_data.profile_img }
+          let output_data = { name: user_data.name, f_id: cookie.u_id, profileImg: user_data.profileImg }
           socket.broadcast.to(u_s[data.f_id]).emit('calling', output_data);
           user_connected_to_uid[cookie.u_id].caller_u_id = data.f_id; // store friend id into self data
           user_connected_to_uid[data.f_id].caller_u_id = cookie.u_id; // store calling id to friend data 
@@ -463,7 +463,7 @@ io.on('connection', function (socket) {
     console.log("end-call");
     console.log (data);
     try {
-      let cookie = jwt.decode(data.li);
+      let cookie = socket.user ;
       console.log(cookie);
       if (user_connected_to_uid[cookie.u_id]) {
         let user_data = user_connected_to_uid[cookie.u_id];
@@ -497,7 +497,7 @@ io.on('connection', function (socket) {
     console.log("call-decline");
     console.log (data);
     try {
-      let cookie = jwt.decode(data.li);
+      let cookie = socket.user;
       console.log(cookie);
       if (user_connected_to_uid[cookie.u_id]) {
         let user_data = user_connected_to_uid[cookie.u_id];
@@ -541,7 +541,7 @@ io.on('connection', function (socket) {
     let offer;
 
     try {
-      let cookie = jwt.decode(data.li);
+      let cookie = socket.user;
       console.log( "cookie ")
       console.log( cookie )
       console.log( "data ")
