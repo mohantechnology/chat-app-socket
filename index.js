@@ -29,7 +29,7 @@ io.use((socket, next) => {
   // return next();
   console.log("inside middleware********")
   // next(new Error("redirect"));
-  const token = socket.request.cookies['sid'];
+  const token = socket.request.cookies['sid'] || socket.request.cookies['lid'];
   if (!token) {
     console.log("!token")
 
