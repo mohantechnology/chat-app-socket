@@ -24,7 +24,8 @@ io.use(cookieParser());
 
 io.use((socket, next) => {
 
-  // console.log(  socket.request.cookies['sid'])
+  console.log(  "socket.request.cookies['sid']")
+  console.log(  socket.request.cookies)
   // console.log(  socket.user)
   // return next();
   console.log("inside middleware********")
