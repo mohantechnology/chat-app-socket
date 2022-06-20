@@ -22,7 +22,40 @@ const { json } = require('express');
 io.use(cookieParser());
 
 
-io.use((socket, next) => {
+// io.use((socket, next) => {
+
+//   console.log(  "socket.request.cookies['sid']")
+//   console.log(  socket.request.cookies)
+//   // console.log(  socket.user)
+//   // return next();
+//   console.log("inside middleware********")
+//   // next(new Error("redirect"));
+//   const token = socket.request.cookies['sid'] || socket.request.cookies['lid'];
+//   if (!token) {
+//     console.log("!token")
+
+//     return socket.emit("redirect");
+//   }
+//   try {
+
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+//     socket.user = decoded;
+//     socket.user.u_id = decoded.uId;
+//     socket.user.sid = token;
+//   } catch (err) {
+//     console.log(err)
+  
+
+//     return socket.emit("redirect");
+
+//   }
+//   console.log("moving to next")
+//   return next();
+
+// })
+
+
+function  decode_token (socket, next)  {
 
   console.log(  "socket.request.cookies['sid']")
   console.log(  socket.request.cookies)
@@ -45,13 +78,16 @@ io.use((socket, next) => {
   } catch (err) {
     console.log(err)
   
+
     return socket.emit("redirect");
 
   }
   console.log("moving to next")
+  if( next){
   return next();
+}
 
-})
+}
 
 var port = process.env.PORT || 8000;
 
@@ -104,7 +140,7 @@ io.on('connection', function (socket) {
   console.log(" -- initial new user connecte\n");
   // let parsed_cookie = cookie.parse(socket.handshake.headers.cookie);    
   // console.log( parsed_cookie)
-  let cookie = jwt.decode(socket.request.cookies['li']);
+  // let cookie = jwt.decode(socket.request.cookies['li']);
   // console.log("cookei data is "); 
   // console.log(cookie);
   // print_session_data() 
@@ -112,15 +148,22 @@ io.on('connection', function (socket) {
   socket.on("user-connected", async (data) => {
 
     try {
+      console.log("user-connected------------------------------");
+     
       console.log("data");
       console.log (data);
  
-      console.log("socket.user");
+      console.log("<-------before socket.user");
       console.log(socket.user);
 
+      decode_token( socket)
+      console.log(" <----after socket.user");
+      console.log(socket.user);
       // let cookie =  jwt.verify(data.sid, process.env.JWT_SECRET_KEY) ;
       let cookie =  socket.user;
-      
+      // socket.user = cookie ; 
+      // socket.user = cookie ; 
+ 
       console.log("cookie");
       console.log(cookie);
       if( !cookie){ 
@@ -226,14 +269,17 @@ io.on('connection', function (socket) {
 
 
   socket.on('typing', async (data) => {
+    data.u_id = socket.user.uId ; 
     socket.broadcast.to(u_s[data.curr_f_id]).emit('typing', data);
-   print_session_data(); 
-   console.log( "socket.user")
-   console.log( socket.user)
+  //  print_session_data(); 
+  //  console.log( "socket.user")
+  //  console.log( socket.user)
+  //    console.log( "data")
+  //  console.log( data)
   });
 
   socket.on('not-typing', async (data) => {
-
+    data.u_id = socket.user.uId ; 
     socket.broadcast.to(u_s[data.curr_f_id]).emit('not-typing', data);
 
 
@@ -566,7 +612,7 @@ io.on('connection', function (socket) {
 
 
   });
-
+ 
 
 
   socket.on('user-disconnect', async (data) => {
