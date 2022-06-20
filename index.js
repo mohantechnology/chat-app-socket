@@ -55,15 +55,15 @@ io.use(cookieParser());
 // })
 
 
-function  decode_token (socket, next)  {
+function  decode_token (socket, next,data)  {
 
-  console.log(  "socket.request.cookies['sid']")
-  console.log(  socket.request.cookies)
+  // console.log(  "socket.request.cookies['sid']")
+  // console.log(  socket.request.cookies)
   // console.log(  socket.user)
   // return next();
   console.log("inside middleware********")
   // next(new Error("redirect"));
-  const token = socket.request.cookies['sid'] || socket.request.cookies['lid'];
+  const token =  data && data.sid || socket.request.cookies['sid'] || socket.request.cookies['lid'];
   if (!token) {
     console.log("!token")
 
@@ -156,7 +156,7 @@ io.on('connection', function (socket) {
       console.log("<-------before socket.user");
       console.log(socket.user);
 
-      decode_token( socket)
+      decode_token( socket , null, data)
       console.log(" <----after socket.user");
       console.log(socket.user);
       // let cookie =  jwt.verify(data.sid, process.env.JWT_SECRET_KEY) ;
