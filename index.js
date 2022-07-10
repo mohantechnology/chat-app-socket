@@ -5,6 +5,7 @@ var http = require('http').Server(app);
 // var io = require('socket.io')(http, { cors: {
 //   origin: "http://localhost:3000"
 // }});
+var xss = require("xss");
 var io = require('socket.io')(http);
 const axios = require('axios');
 const { createSocket } = require('dgram');
@@ -322,7 +323,7 @@ io.on('connection', function (socket) {
           "uId": data.curr_f_id ,
           // "currentStatus": "offline"
       },
-      "message": data.message || " ",
+      "message": xss( data.message) || " ",
       "messageType": data.messageType || "text", 
        result: true , 
       
