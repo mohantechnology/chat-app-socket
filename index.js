@@ -12,7 +12,6 @@ const axios = require('axios');
 const jwt = require("jsonwebtoken");
 const cookieParser = require('socket.io-cookie-parser');
  
-// app.use(cors())
 io.use(cookieParser());
 
 function  decode_token (socket, next,data)  {
@@ -70,7 +69,7 @@ process.on('uncaughtException', (error) => {
 });
 
 app.get('/', (req, res) => {
-  res.status(200).json({message:"Connected Successfully"});
+  res.status(200).json({message:"Connected Successfully 1"});
 
 });
 
