@@ -69,7 +69,7 @@ process.on('uncaughtException', (error) => {
 });
 
 app.get('/', (req, res) => {
-  res.status(200).json({message:"Connected Successfully 1"});
+  res.status(200).json({message:"Connected Successfully"});
 
 });
 
